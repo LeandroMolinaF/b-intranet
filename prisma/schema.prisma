@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  fullName   String
+  role       Role     @default(STUDENT)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  courses    Course[] @relation("UserCourses")
+  taught     Course[] @relation("TeacherCourses")
+  attendance Attendance[]
+  submissions Submission[]
+}
+
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  semester    String
+  createdAt   DateTime @default(now())
+
+  teacher     User     @relation("TeacherCourses", fields: [teacherId], references: [id])
+  teacherId   String
+
+  students    User[]   @relation("UserCourses")
+  classes     Class[]
+  evaluations Evaluation[]
+}
+
+model Class {
+  id        String   @id @default(uuid())
+  title     String
+  date      DateTime
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  resources Resource[]
+  attendance Attendance[]
+}
+
+model Attendance {
+  id        String   @id @default(uuid())
+  status    AttendanceStatus
+  class     Class   @relation(fields: [classId], references: [id])
+  classId   String
+  student   User    @relation(fields: [studentId], references: [id])
+  studentId String
+  timestamp DateTime @default(now())
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  JUSTIFIED
+}
+
+model Resource {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  class     Class   @relation(fields: [classId], references: [id])
+  classId   String
+  uploadedAt DateTime @default(now())
+}
+
+model Evaluation {
+  id        String   @id @default(uuid())
+  title     String
+  date      DateTime
+  course    Course   @relation(fields: [courseId], references: [id])
+  courseId  String
+
+  submissions Submission[]
+}
+
+model Submission {
+  id           String   @id @default(uuid())
+  student      User     @relation(fields: [studentId], references: [id])
+  studentId    String
+  evaluation   Evaluation @relation(fields: [evaluationId], references: [id])
+  evaluationId String
+  fileUrl      String
+  grade        Float?
+  submittedAt  DateTime  @default(now())
+}
