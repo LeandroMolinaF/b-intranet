@@ -1,26 +1,69 @@
-import { Injectable } from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import { LoginAuthDto } from './dto/login-auth.dto';
+import { PrismaService } from 'src/database/prisma.service';
+import * as bcrypt from 'bcrypt';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  create(createAuthDto: CreateAuthDto) {
-    return 'This action adds a new auth';
+  constructor(
+    private prismaService: PrismaService,
+    private jwtService: JwtService,
+  ) {}
+
+  async register(createAuthDto: CreateAuthDto) {
+    try {
+      const saltOrRounds = 10;
+      const hash = await bcrypt.hash(createAuthDto.password, saltOrRounds);
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithOutPass } = createAuthDto;
+      const newUser = await this.prismaService.user.create({
+        data: { createdAt: new Date(), password: hash, ...userWithOutPass },
+      });
+      return newUser;
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   }
 
-  findAll() {
-    return `This action returns all auth`;
-  }
+  async login(user: LoginAuthDto) {
+    try {
+      const existUser = await this.prismaService.user.findUnique({
+        where: { rut: user.rut },
+      });
+      if (!existUser) {
+        throw new BadRequestException('Usuario o contraseña invalidos');
+      }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
-  }
+      const isMatch = await bcrypt.compare(user.password, existUser.password);
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
-  }
+      if (!isMatch) {
+        throw new BadRequestException('Usuario o contraseña invalidos');
+      }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+      const { password: _, ...userWithOutPassword } = existUser;
+      const payload = {
+        ...userWithOutPassword,
+      };
+      const access_token = await this.jwtService.signAsync(payload);
+      console.log(access_token);
+      return {
+        token: access_token,
+        user: {
+          id: userWithOutPassword.id,
+          email: userWithOutPassword.email,
+          role: userWithOutPassword.role,
+        },
+      };
+    } catch (error) {
+      console.log(error);
+      throw error;
+    }
   }
 }
