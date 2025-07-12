@@ -47,7 +47,12 @@ export class CourseController {
   }
 
   @Post(':id/classes')
-  reateClass(@Param('id') id: string, @Body() createClassDto: CreateClassDto) {
+  createClass(@Param('id') id: string, @Body() createClassDto: CreateClassDto) {
     return this.courseService.createClass(id, createClassDto);
+  }
+
+  @Get('semester/:id')
+  findSemesterCourses(@Param('id') id: string) {
+    return this.courseService.findSemesterCourses(id);
   }
 }

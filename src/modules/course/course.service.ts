@@ -34,6 +34,7 @@ export class CourseService {
     try {
       const course = await this.prismaService.course.findUnique({
         where: { id: id },
+        include: { students: true },
       });
       return course;
     } catch (error) {
@@ -71,6 +72,7 @@ export class CourseService {
     try {
       const classes = await this.prismaService.class.findMany({
         where: { courseId: id },
+        orderBy: { date: 'asc' },
       });
       return classes;
     } catch (error) {
@@ -85,6 +87,19 @@ export class CourseService {
         data: { courseId, ...createClassDto },
       });
       return newClass;
+    } catch (error) {
+      console.error(error);
+      throw error;
+    }
+  }
+
+  async findSemesterCourses(semester: string) {
+    try {
+      const courses = await this.prismaService.course.findMany({
+        where: { semester: semester },
+        include: { students: true },
+      });
+      return courses;
     } catch (error) {
       console.error(error);
       throw error;
